@@ -1,0 +1,127 @@
+# install libraries
+# pip install geopandas, folium
+
+# import libraries 
+import pandas as pd
+import geopandas as gpd
+import matplotlib.pyplot as plt
+import folium as fl
+from google.cloud import bigquery
+
+# Create a "Client" object
+client = bigquery.Client()
+
+# Construct a reference to the "chicago_crime" dataset
+dataset_ref = client.dataset("chicago_crime", project="bigquery-public-data")
+
+# API request - fetch the dataset
+dataset = client.get_dataset(dataset_ref)
+
+# Construct a reference to particular table called "crime"
+table_ref = dataset_ref.table("crime")
+
+# API request - fetch the table
+table = client.get_table(table_ref)
+
+# Take a sample of 10000 rows
+df = client.list_rows(table, max_results=10000).to_dataframe()
+
+
+# Map the IUCR (Illinois Uniform Crime Reporting) codes to their respective names and assign a 'severity level'
+
+severity_map = {
+    '031A': 5,   # Homicide
+    '0430': 4,   # Sexual Assault
+    '0460': 3,   # Robbery
+    '0461': 3,   # Armed Robbery
+    '051A': 2,   # Aggravated Assault
+    '0560': 2,   # Simple Assault
+    '0850': 2,   # Burglary
+    '0860': 2,   # Theft from Motor Vehicle
+    '0870': 2,   # Theft
+    '1150': 2,   # Motor Vehicle Theft
+    '1210': 3,   # Arson
+    '1220': 1,   # Criminal Damage
+    '1310': 1,   # Disorderly Conduct
+    '1330': 1,   # Drug Offenses
+    '1345': 1,   # Prostitution
+    '2820': 1,   # Other Offenses
+    '0312': 4,   # Sexual Assault with a Weapon
+    '033A': 4,   # Sexual Assault, Aggravated
+    '0454': 2,   # Theft of Bicycle
+    '0486': 2,   # Theft of a Motor Vehicle
+    '0620': 2,   # Battery
+    '0810': 1,   # Fraud
+    '0820': 1,   # Forgery
+    '0890': 1,   # Identity Theft
+    '0910': 1,   # Stalking
+    '1120': 1,   # Threatening Behavior
+    '1320': 1,   # Criminal Trespass
+    '0320': 3,   # Robbery with Force
+    '0497': 1,   # Drug Possession
+    '0520': 1,   # Drug Trafficking
+    '502R': 2,   # Illegal Possession of Firearm
+    '0610': 1,   # Vandalism
+    '1130': 1,   # Criminal Trespass to Vehicle
+    '1156': 1,   # Criminal Trespass to Land
+    '1581': 1,   # Obstructing Justice
+    '4387': 1,   # Resisting Arrest
+    '0281': 4,   # Domestic Violence
+    '0326': 2,   # Battery - Domestic
+    '1570': 1,   # Illegal Drug Use
+    '2024': 3,   # Criminal Sexual Assault
+    '5002': 1,   # Drug Paraphernalia
+    '0558': 1,   # Obstructing Traffic
+    '1110': 1,   # Reckless Driving
+    '1360': 2,   # DUI
+    '1811': 1,   # Minor Consumption
+    '2021': 2,   # Public Indecency
+    '2170': 1,   # Harassment
+    '2896': 1,   # Disorderly House
+    '0483': 2,   # Aggravated Battery
+    '0920': 1,   # Escape
+    '1153': 1,   # Leaving the Scene of an Accident
+    '1206': 1,   # Larceny from Person
+    '1365': 1,   # False Police Report
+    '2825': 1,   # Endangering Child
+    '3731': 1,   # Contributing to Delinquency
+    '5001': 1,   # Sale of Controlled Substance
+    '5111': 1,   # Reckless Endangerment
+    '0495': 1,   # Criminal Use of Weapons
+    '1154': 1,   # Use of Firearm with Intent
+    '141C': 1,   # Carrying Concealed Weapon
+    '143A': 2,   # Child Abduction
+    '2826': 1,   # Stalking - Domestic
+    '0110': 5,   # Murder
+    '0917': 2,   # Assault with Intent to Kill
+    '0264': 3,   # Burglary - Forced Entry
+    '0420': 2,   # Sexual Assault - Domestic
+    '0440': 2,   # Sexual Abuse
+    '0930': 2,   # Other Sex Offenses
+    '1710': 1,   # Arson - Aggravated
+    '0330': 4,   # Sex Offenses
+    '1195': 1,   # Other Crimes Against Person
+    '0470': 2,   # Aggravated Assault with Firearm
+    '1562': 1,   # Firearm Offenses
+    '2022': 2,   # Kidnapping
+    '0498': 1,   # Miscellaneous Offenses
+}
+
+# Using the severity level dictionary create a heatmap of crime severity:
+
+from folium.plugins import HeatMap
+df['severity'] = df['iucr'].map(severity_map)
+
+# Center the map at the average latitude and longitude of the dataset
+m = folium.Map(location=[df['latitude'].mean(), df['longitude'].mean()], zoom_start=13, tiles='cartodb darkmatter')
+
+# If you have a 'severity' column, include it for intensity
+heat_data = df[['latitude', 'longitude', 'severity']].dropna().values.tolist()
+
+HeatMap(heat_data,max_zoom=13).add_to(m)
+
+# Add the heatmap layear
+HeatMap(heat_data).add_to(m)
+
+# Display the mapa
+m
